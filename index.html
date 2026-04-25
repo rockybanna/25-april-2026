@@ -43,7 +43,9 @@
 <div id="restaurants"></div>
 
 <script>
-const supabase = window.supabase.createClient(
+const { createClient } = window.supabase;
+
+const supabase = createClient(
   "https://rjkkasswxuzhaegocbim.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqa2thc3N3eHV6aGFlZ29jYmltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMDE3OTIsImV4cCI6MjA5MjY3Nzc5Mn0.l08t44YE-ElP9pSXV6s1Z6qgktaNz8jboEjJ0cK_BCU"
 );
