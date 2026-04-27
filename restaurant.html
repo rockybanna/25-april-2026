@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Restaurant Panel</title>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <style>
+    body { font-family: sans-serif; background:#f5f5f5; margin:0; }
+    .card { background:white; margin:10px; padding:15px; border-radius:10px; }
+    button { padding:10px; margin-top:10px; width:100%; }
+  </style>
+
+</head>
+
+<body>
+
+<h2 style="padding:10px">Restaurant Orders</h2>
+<div id="list"></div>
+
+<script>
+const { createClient } = window.supabase;
+
+const sb = createClient(
+  "https://rjkkasswxuzhaegocbim.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqa2thc3N3eHV6aGFlZ29jYmltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMDE3OTIsImV4cCI6MjA5MjY3Nzc5Mn0.l08t44YE-ElP9pSXV6s1Z6qgktaNz8jboEjJ0cK_BCU"
+);
+
+// 🔴 CHANGE THIS for each restaurant
+const RESTAURANT_NAME = "Restaurant 1";
+
+async function loadOrders() {
+
+  // get restaurant id
+  const { data: rest } = await sb
+    .from('restaurants')
+    .select('id')
+    .eq('name', RESTAURANT_NAME)
+    .single();
+
+  // get only PAID orders
+  const { data } = await sb
+    .from('orders')
+    .select('*')
+    .eq('restaurant_id', rest.id)
+    .eq('status', 'PAID')
+    .order('created_at', { ascending: false });
+
+  const container = document.getElementById("list");
+  container.innerHTML = "";
+
+  data.forEach(o => {
+
+    const div = document.createElement("div");
+    div.className = "card";
+
+    div.innerHTML = `
+      <p><b>Item:</b> ${o.item_name}</p>
+      <p>Total: ₹${o.total_amount}</p>
+
+      <button onclick="markReady('${o.id}')">
+        Mark Ready
+      </button>
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+async function markReady(orderId) {
+
+  await sb.from('orders')
+    .update({ status: 'READY' })
+    .eq('id', orderId);
+
+  alert("Order Ready");
+  loadOrders();
+}
+
+loadOrders();
+</script>
+
+</body>
+</html>
