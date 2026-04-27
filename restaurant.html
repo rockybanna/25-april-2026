@@ -34,18 +34,23 @@ const RESTAURANT_NAME = "Restaurant 1";
 async function loadOrders() {
 
   // get restaurant id
-  const { data: rest } = await sb
-    .from('restaurants')
-    .select('id')
-    .eq('name', RESTAURANT_NAME)
-    .single();
+const { data: rest } = await sb
+  .from('restaurants')
+  .select('id')
+  .eq('name', RESTAURANT_NAME)
+  .single();
 
+if (!rest) {
+  alert("Restaurant not found");
+  return;
+}
+  
   // get only PAID orders
   const { data } = await sb
     .from('orders')
     .select('*')
     .eq('restaurant_id', rest.id)
-    .eq('status', 'PAID')
+    .in('status', ['PAID', 'ACCEPTED'])
     .order('created_at', { ascending: false });
 
   const container = document.getElementById("list");
@@ -56,17 +61,58 @@ async function loadOrders() {
     const div = document.createElement("div");
     div.className = "card";
 
-    div.innerHTML = `
-      <p><b>Item:</b> ${o.item_name}</p>
-      <p>Total: ₹${o.total_amount}</p>
+div.innerHTML = `
+  <p><b>Item:</b> ${o.item_name}</p>
+  <p>Total: ₹${o.total_amount}</p>
+  <p>Prep Time: ${o.preparation_time || '-'} min</p>
 
-      <button onclick="markReady('${o.id}')">
-        Mark Ready
-      </button>
-    `;
+  ${o.status === 'PAID' ? `
+    <button onclick="acceptOrder('${o.id}')">Accept</button>
+    <button onclick="rejectOrder('${o.id}')">Reject</button>
+  ` : ''}
+
+  ${o.status === 'ACCEPTED' ? `
+    <button onclick="markReady('${o.id}')">Mark Ready</button>
+  ` : ''}
+`;
 
     container.appendChild(div);
   });
+}
+
+async function acceptOrder(orderId) {
+
+  const time = prompt("Enter preparation time (minutes):");
+
+  if (!time || isNaN(time)) {
+  alert("Enter valid time");
+  return;
+}
+  
+
+  await sb.from('orders')
+    .update({
+      status: 'ACCEPTED',
+      preparation_time: parseInt(time),
+      accepted_at: new Date()
+    })
+    .eq('id', orderId);
+
+  alert("Order Accepted");
+  loadOrders();
+}
+async function rejectOrder(orderId) {
+
+  const reason = prompt("Enter reason:");
+
+  await sb.from('orders')
+    .update({
+      status: 'REJECTED'
+    })
+    .eq('id', orderId);
+
+  alert("Order Rejected");
+  loadOrders();
 }
 
 async function markReady(orderId) {
