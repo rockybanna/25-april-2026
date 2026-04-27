@@ -108,21 +108,26 @@ const final_price = display_price * (1 - discount / 100);
     container.appendChild(div);
   });
 }
-  function showBill(restaurantId, itemName, price) {
 
-const { data: rest } = await sb
-  .from('restaurants')
-  .select('markup_percent, discount_percent')
-  .eq('id', restaurantId)
-  .single();
+async function showBill(restaurantId, itemName, price) {
 
-const markup = rest.markup_percent;
-const discountPercent = rest.discount_percent;
+  const { data: rest } = await sb
+    .from('restaurants')
+    .select('markup_percent, discount_percent')
+    .eq('id', restaurantId)
+    .single();
 
-const display_price = price * (1 + markup / 100);
-const discount = display_price * (discountPercent / 100);
-const final_price = display_price - discount;
-    
+  const markup = rest.markup_percent;
+  const discountPercent = rest.discount_percent;
+
+  const display_price = price * (1 + markup / 100);
+  const discount = display_price * (discountPercent / 100);
+  const final_price = display_price - discount;
+
+  const delivery = 40;
+  const platform = 5;
+  const total = final_price + delivery + platform;
+
   const container = document.getElementById("restaurants");
 
   container.innerHTML = `
@@ -138,7 +143,7 @@ const final_price = display_price - discount;
 
       <hr>
 
-      <h3>To Pay: ₹${total}</h3>
+      <h3>To Pay: ₹${total.toFixed(0)}</h3>
 
       <button onclick="placeOrder('${restaurantId}','${itemName}',${price})">
         Confirm Order
@@ -150,28 +155,43 @@ const final_price = display_price - discount;
   `;
 }
   
-  async function placeOrder(restaurantId, itemName, price) {
+async function placeOrder(restaurantId, itemName, price) {
 
-  const restaurant_price = price;
-  const display_price = price * 1.25;
-  const discount = display_price * 0.20;
-  const final_price = price;
+  const { data: rest } = await sb
+    .from('restaurants')
+    .select('markup_percent, discount_percent')
+    .eq('id', restaurantId)
+    .single();
 
-  const commission = price * 0.10;
-  const payout = price - commission;
+  const markup = rest.markup_percent;
+  const discountPercent = rest.discount_percent;
 
-  const { error } = await sb.from('orders').insert({
-    restaurant_id: restaurantId,
-    item_name: itemName,
-    restaurant_price,
-    display_price,
-    discount,
-    final_price,
-    commission,
-    payout,
-    status: 'PENDING'
-  });
+  const display_price = price * (1 + markup / 100);
+  const discount = display_price * (discountPercent / 100);
+  const final_price = display_price - discount;
 
+  const commission = final_price * 0.10;
+  const payout = final_price - commission;
+
+const delivery = 40;
+const platform = 5;
+const total = final_price + delivery + platform;
+
+const { error } = await sb.from('orders').insert({
+  restaurant_id: restaurantId,
+  item_name: itemName,
+  restaurant_price: price,
+  display_price,
+  discount,
+  final_price,
+  delivery_charge: delivery,
+  platform_fee: platform,
+  total_amount: total,
+  commission,
+  payout,
+  status: 'PENDING'
+});
+  
   if (error) {
     alert("Error placing order");
     console.log(error);
