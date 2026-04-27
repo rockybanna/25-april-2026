@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Delivery Panel</title>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <style>
+    body { font-family: sans-serif; background:#f5f5f5; margin:0; }
+    .card { background:white; margin:10px; padding:15px; border-radius:10px; }
+    button { padding:10px; margin-top:10px; width:100%; }
+  </style>
+
+</head>
+
+<body>
+
+<h2 style="padding:10px">Delivery Partner Panel</h2>
+<div id="list"></div>
+
+<script>
+const { createClient } = window.supabase;
+
+const sb = createClient(
+  "https://rjkkasswxuzhaegocbim.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqa2thc3N3eHV6aGFlZ29jYmltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMDE3OTIsImV4cCI6MjA5MjY3Nzc5Mn0.l08t44YE-ElP9pSXV6s1Z6qgktaNz8jboEjJ0cK_BCU"
+);
+
+// 🔴 CHANGE THIS (simulate DP login)
+const DP_NAME = "DP 1";
+
+async function loadOrders() {
+
+  // get dp id
+  const { data: dp } = await sb
+    .from('profiles')
+    .select('id')
+    .eq('name', DP_NAME)
+    .single();
+
+  // get available orders OR assigned orders
+  const { data } = await sb
+    .from('orders')
+    .select('*')
+    .or(`status.eq.READY,dp_id.eq.${dp.id}`)
+    .order('created_at', { ascending: false });
+
+  const container = document.getElementById("list");
+  container.innerHTML = "";
+
+  data.forEach(o => {
+
+    const div = document.createElement("div");
+    div.className = "card";
+
+    div.innerHTML = `
+      <p><b>Item:</b> ${o.item_name}</p>
+      <p>Total: ₹${o.total_amount}</p>
+      <p>Status: ${o.status}</p>
+
+      ${o.status === 'READY' ? `
+        <button onclick="acceptDelivery('${o.id}','${dp.id}')">
+          Accept Delivery
+        </button>
+      ` : ''}
+
+      ${o.status === 'PICKED' && o.dp_id === dp.id ? `
+        <button onclick="markDelivered('${o.id}')">
+          Mark Delivered
+        </button>
+      ` : ''}
+
+      ${o.status === 'ACCEPTED_BY_DP' && o.dp_id === dp.id ? `
+        <button onclick="markPicked('${o.id}')">
+          Mark Picked
+        </button>
+      ` : ''}
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+async function acceptDelivery(orderId, dpId) {
+
+  await sb.from('orders')
+    .update({
+      status: 'ACCEPTED_BY_DP',
+      dp_id: dpId
+    })
+    .eq('id', orderId);
+
+  alert("Delivery Accepted");
+  loadOrders();
+}
+
+async function markPicked(orderId) {
+
+  await sb.from('orders')
+    .update({ status: 'PICKED' })
+    .eq('id', orderId);
+
+  alert("Order Picked");
+  loadOrders();
+}
+
+async function markDelivered(orderId) {
+
+  await sb.from('orders')
+    .update({ status: 'DELIVERED' })
+    .eq('id', orderId);
+
+  alert("Order Delivered");
+  loadOrders();
+}
+
+loadOrders();
+</script>
+
+</body>
+</html>
