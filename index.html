@@ -92,7 +92,7 @@ async function loadMenu(restaurantId, name) {
     div.innerHTML = `
       <h3>${item.name}</h3>
       <p>₹${item.restaurant_price}</p>
-      <button onclick="placeOrder('${restaurantId}','${item.name}',${item.restaurant_price})">
+      <button onclick="showBill('${restaurantId}','${item.name}',${item.restaurant_price})">
         Order Now
       </button>
     `;
@@ -100,6 +100,44 @@ async function loadMenu(restaurantId, name) {
     container.appendChild(div);
   });
 }
+  function showBill(restaurantId, itemName, price) {
+
+  const display_price = price * 1.25;
+  const discount = display_price * 0.20;
+  const final_price = price;
+
+  const delivery = 40;
+  const platform = 5;
+
+  const total = final_price + delivery + platform;
+
+  const container = document.getElementById("restaurants");
+
+  container.innerHTML = `
+    <div class="restaurant">
+      <h2>Bill Summary</h2>
+
+      <p>Item: ${itemName}</p>
+      <p>Item Total: ₹${display_price.toFixed(0)}</p>
+      <p>Discount: -₹${discount.toFixed(0)}</p>
+
+      <p>Delivery: ₹${delivery}</p>
+      <p>Platform Fee: ₹${platform}</p>
+
+      <hr>
+
+      <h3>To Pay: ₹${total}</h3>
+
+      <button onclick="placeOrder('${restaurantId}','${itemName}',${price})">
+        Confirm Order
+      </button>
+
+      <br><br>
+      <button onclick="loadRestaurants()">Cancel</button>
+    </div>
+  `;
+}
+  
   async function placeOrder(restaurantId, itemName, price) {
 
   const restaurant_price = price;
