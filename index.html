@@ -177,27 +177,69 @@ const delivery = 40;
 const platform = 5;
 const total = final_price + delivery + platform;
 
-const { error } = await sb.from('orders').insert({
-  restaurant_id: restaurantId,
-  item_name: itemName,
-  restaurant_price: price,
-  display_price,
-  discount,
-  final_price,
-  delivery_charge: delivery,
-  platform_fee: platform,
-  total_amount: total,
-  commission,
-  payout,
-  status: 'PENDING'
-});
-  
-  if (error) {
-    alert("Error placing order");
-    console.log(error);
-  } else {
-    alert("Order placed!");
-  }
+const { data, error } = await sb.from('orders')
+  .insert({
+    restaurant_id: restaurantId,
+    item_name: itemName,
+    restaurant_price: price,
+    display_price,
+    discount,
+    final_price,
+    delivery_charge: delivery,
+    platform_fee: platform,
+    total_amount: total,
+    commission,
+    payout,
+    status: 'PENDING'
+  })
+  .select()
+  .single();
+
+if (error) {
+  alert("Error placing order");
+  console.log(error);
+} else {
+  showPayment(data.id, total);
+}
+  function showPayment(orderId, amount) {
+
+  const upi = "yourupi@okaxis";  // 🔴 replace with your UPI ID
+  const name = "FoodXpress";
+
+  const link = `upi://pay?pa=${upi}&pn=${name}&am=${amount}&cu=INR&tn=Order-${orderId}`;
+
+  const container = document.getElementById("restaurants");
+
+  container.innerHTML = `
+    <div class="restaurant">
+      <h2>Complete Payment</h2>
+
+      <p>Order ID: ${orderId}</p>
+      <p>Amount: ₹${amount}</p>
+
+      <a href="${link}" style="display:block; margin:15px 0;">
+        <button>Pay via UPI</button>
+      </a>
+
+      <button onclick="paymentDone('${orderId}')">
+        I have paid
+      </button>
+    </div>
+  `;
+}
+  async function paymentDone(orderId) {
+
+  await sb
+    .from('payment_attempts')
+    .insert({
+      order_id: orderId,
+      attempt_number: 1,
+      amount: 0,
+      status: 'PENDING'
+    });
+
+  alert("Payment submitted for verification");
+  loadRestaurants();
 }
   
 loadRestaurants();
