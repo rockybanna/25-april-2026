@@ -1,12 +1,13 @@
 <!DOCTYPE html>
+
 <html>
 <head>
   <meta charset="UTF-8">
   <title>FoodXpress</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
   <style>
     body {
       font-family: sans-serif;
@@ -33,13 +34,19 @@
       color: red;
       font-size: 14px;
     }
+
+    button {
+      padding: 10px;
+      margin-top: 10px;
+      width: 100%;
+    }
   </style>
+
 </head>
 
 <body>
 
 <div class="header">FoodXpress</div>
-
 <div id="restaurants"></div>
 
 <script>
@@ -47,20 +54,17 @@ const { createClient } = window.supabase;
 
 const sb = createClient(
   "https://rjkkasswxuzhaegocbim.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqa2thc3N3eHV6aGFlZ29jYmltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMDE3OTIsImV4cCI6MjA5MjY3Nzc5Mn0.l08t44YE-ElP9pSXV6s1Z6qgktaNz8jboEjJ0cK_BCU"
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqa2thc3N3eHV6aGFlZ29jYmltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMDE3OTIsImV4cCI6MjA5MjY3Nzc5Mn0.l08t44YE-ElP9pSXV6s1Z6qgktaNz8jboEjJ0cK_BCU
+"
 );
 
 async function loadRestaurants() {
-
-  const { data } = await sb
-    .from('restaurants')
-    .select('*');
+  const { data } = await sb.from('restaurants').select('*');
 
   const container = document.getElementById("restaurants");
   container.innerHTML = "";
 
   data.forEach(r => {
-
     const div = document.createElement("div");
     div.className = "restaurant";
 
@@ -70,36 +74,36 @@ async function loadRestaurants() {
     `;
 
     div.onclick = () => loadMenu(r.id, r.name);
-
     container.appendChild(div);
   });
 }
 
 async function loadMenu(restaurantId, name) {
-
   const { data } = await sb
-.from('menu_items')
-.select('*, restaurants(markup_percent, discount_percent)')
-.eq('restaurant_id', restaurantId);
+    .from('menu_items')
+    .select('*, restaurants(markup_percent, discount_percent)')
+    .eq('restaurant_id', restaurantId);
+
   const container = document.getElementById("restaurants");
   container.innerHTML = `<h2 style="padding:10px">${name}</h2>`;
 
   data.forEach(item => {
-const markup = item.restaurants.markup_percent;
-const discount = item.restaurants.discount_percent;
+    const markup = item.restaurants.markup_percent;
+    const discount = item.restaurants.discount_percent;
 
-const display_price = item.restaurant_price * (1 + markup / 100);
-const final_price = display_price * (1 - discount / 100);
+    const display_price = item.restaurant_price * (1 + markup / 100);
+    const final_price = display_price * (1 - discount / 100);
+
     const div = document.createElement("div");
     div.className = "restaurant";
 
     div.innerHTML = `
       <h3>${item.name}</h3>
       <p>
-  <strike>₹${display_price.toFixed(0)}</strike>
-  <b> ₹${final_price.toFixed(0)}</b>
-</p>
-<p style="color:green">${discount}% OFF</p>
+        <strike>₹${display_price.toFixed(0)}</strike>
+        <b> ₹${final_price.toFixed(0)}</b>
+      </p>
+      <p style="color:green">${discount}% OFF</p>
       <button onclick="showBill('${restaurantId}','${item.name}',${item.restaurant_price})">
         Order Now
       </button>
@@ -110,7 +114,6 @@ const final_price = display_price * (1 - discount / 100);
 }
 
 async function showBill(restaurantId, itemName, price) {
-
   const { data: rest } = await sb
     .from('restaurants')
     .select('markup_percent, discount_percent')
@@ -133,30 +136,24 @@ async function showBill(restaurantId, itemName, price) {
   container.innerHTML = `
     <div class="restaurant">
       <h2>Bill Summary</h2>
-
       <p>Item: ${itemName}</p>
       <p>Item Total: ₹${display_price.toFixed(0)}</p>
       <p>Discount: -₹${discount.toFixed(0)}</p>
-
       <p>Delivery: ₹${delivery}</p>
       <p>Platform Fee: ₹${platform}</p>
-
       <hr>
-
       <h3>To Pay: ₹${total.toFixed(0)}</h3>
 
       <button onclick="placeOrder('${restaurantId}','${itemName}',${price})">
         Confirm Order
       </button>
 
-      <br><br>
       <button onclick="loadRestaurants()">Cancel</button>
     </div>
   `;
 }
-  
-async function placeOrder(restaurantId, itemName, price) {
 
+async function placeOrder(restaurantId, itemName, price) {
   const { data: rest } = await sb
     .from('restaurants')
     .select('markup_percent, discount_percent')
@@ -173,37 +170,38 @@ async function placeOrder(restaurantId, itemName, price) {
   const commission = final_price * 0.10;
   const payout = final_price - commission;
 
-const delivery = 40;
-const platform = 5;
-const total = final_price + delivery + platform;
+  const delivery = 40;
+  const platform = 5;
+  const total = final_price + delivery + platform;
 
-const { data, error } = await sb.from('orders')
-  .insert({
-    restaurant_id: restaurantId,
-    item_name: itemName,
-    restaurant_price: price,
-    display_price,
-    discount,
-    final_price,
-    delivery_charge: delivery,
-    platform_fee: platform,
-    total_amount: total,
-    commission,
-    payout,
-    status: 'PENDING'
-  })
-  .select()
-  .single();
+  const { data, error } = await sb.from('orders')
+    .insert({
+      restaurant_id: restaurantId,
+      item_name: itemName,
+      restaurant_price: price,
+      display_price,
+      discount,
+      final_price,
+      delivery_charge: delivery,
+      platform_fee: platform,
+      total_amount: total,
+      commission,
+      payout,
+      status: 'PENDING'
+    })
+    .select()
+    .single();
 
-if (error) {
-  alert("Error placing order");
-  console.log(error);
-} else {
-  showPayment(data.id, total);
+  if (error) {
+    alert("Error placing order");
+    console.log(error);
+  } else {
+    showPayment(data.id, total);
+  }
 }
-  function showPayment(orderId, amount) {
 
-  const upi = "yourupi@okaxis";  // 🔴 replace with your UPI ID
+function showPayment(orderId, amount) {
+  const upi = "rockybanna008ubi@ybl";  // 🔴 replace
   const name = "FoodXpress";
 
   const link = `upi://pay?pa=${upi}&pn=${name}&am=${amount}&cu=INR&tn=Order-${orderId}`;
@@ -213,11 +211,10 @@ if (error) {
   container.innerHTML = `
     <div class="restaurant">
       <h2>Complete Payment</h2>
-
       <p>Order ID: ${orderId}</p>
       <p>Amount: ₹${amount}</p>
 
-      <a href="${link}" style="display:block; margin:15px 0;">
+      <a href="${link}">
         <button>Pay via UPI</button>
       </a>
 
@@ -227,21 +224,19 @@ if (error) {
     </div>
   `;
 }
-  async function paymentDone(orderId) {
 
-  await sb
-    .from('payment_attempts')
-    .insert({
-      order_id: orderId,
-      attempt_number: 1,
-      amount: 0,
-      status: 'PENDING'
-    });
+async function paymentDone(orderId) {
+  await sb.from('payment_attempts').insert({
+    order_id: orderId,
+    attempt_number: 1,
+    amount: null,
+    status: 'PENDING'
+  });
 
   alert("Payment submitted for verification");
   loadRestaurants();
 }
-  
+
 loadRestaurants();
 </script>
 
