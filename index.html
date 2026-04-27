@@ -78,20 +78,28 @@ async function loadRestaurants() {
 async function loadMenu(restaurantId, name) {
 
   const { data } = await sb
-    .from('menu_items')
-    .select('*')
-    .eq('restaurant_id', restaurantId);
-
+.from('menu_items')
+.select('*, restaurants(markup_percent, discount_percent)')
+.eq('restaurant_id', restaurantId);
   const container = document.getElementById("restaurants");
   container.innerHTML = `<h2 style="padding:10px">${name}</h2>`;
 
   data.forEach(item => {
+const markup = item.restaurants.markup_percent;
+const discount = item.restaurants.discount_percent;
+
+const display_price = item.restaurant_price * (1 + markup / 100);
+const final_price = display_price * (1 - discount / 100);
     const div = document.createElement("div");
     div.className = "restaurant";
 
     div.innerHTML = `
       <h3>${item.name}</h3>
-      <p>₹${item.restaurant_price}</p>
+      <p>
+  <strike>₹${display_price.toFixed(0)}</strike>
+  <b> ₹${final_price.toFixed(0)}</b>
+</p>
+<p style="color:green">${discount}% OFF</p>
       <button onclick="showBill('${restaurantId}','${item.name}',${item.restaurant_price})">
         Order Now
       </button>
@@ -102,15 +110,19 @@ async function loadMenu(restaurantId, name) {
 }
   function showBill(restaurantId, itemName, price) {
 
-  const display_price = price * 1.25;
-  const discount = display_price * 0.20;
-  const final_price = price;
+const { data: rest } = await sb
+  .from('restaurants')
+  .select('markup_percent, discount_percent')
+  .eq('id', restaurantId)
+  .single();
 
-  const delivery = 40;
-  const platform = 5;
+const markup = rest.markup_percent;
+const discountPercent = rest.discount_percent;
 
-  const total = final_price + delivery + platform;
-
+const display_price = price * (1 + markup / 100);
+const discount = display_price * (discountPercent / 100);
+const final_price = display_price - discount;
+    
   const container = document.getElementById("restaurants");
 
   container.innerHTML = `
