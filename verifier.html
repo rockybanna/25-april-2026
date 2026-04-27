@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Verifier Panel</title>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <style>
+    body { font-family: sans-serif; background:#f5f5f5; margin:0; }
+    .card { background:white; margin:10px; padding:15px; border-radius:10px; }
+    button { padding:10px; margin-top:10px; width:100%; }
+  </style>
+
+</head>
+
+<body>
+
+<h2 style="padding:10px">Verifier Panel</h2>
+<div id="list"></div>
+
+<script>
+const { createClient } = window.supabase;
+
+const sb = createClient(
+  "https://rjkkasswxuzhaegocbim.supabase.co",
+  "YOUR_ANON_KEY"
+);
+
+async function loadPayments() {
+
+  const { data } = await sb
+    .from('payment_attempts')
+    .select('*, orders(item_name, total_amount)')
+    .eq('status', 'PENDING');
+
+  const container = document.getElementById("list");
+  container.innerHTML = "";
+
+  data.forEach(p => {
+
+    const div = document.createElement("div");
+    div.className = "card";
+
+    div.innerHTML = `
+      <p><b>Order:</b> ${p.order_id}</p>
+      <p>Item: ${p.orders.item_name}</p>
+      <p>Amount: ₹${p.orders.total_amount}</p>
+
+      <button onclick="confirmPayment('${p.id}','${p.order_id}')">
+        Confirm Payment
+      </button>
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+async function confirmPayment(paymentId, orderId) {
+
+  // mark payment as PAID
+  await sb.from('payment_attempts')
+    .update({ status: 'PAID' })
+    .eq('id', paymentId);
+
+  // mark order as PAID
+  await sb.from('orders')
+    .update({ status: 'PAID' })
+    .eq('id', orderId);
+
+  alert("Payment Confirmed");
+
+  loadPayments();
+}
+
+loadPayments();
+</script>
+
+</body>
+</html>
