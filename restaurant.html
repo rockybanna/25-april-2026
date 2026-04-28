@@ -118,7 +118,10 @@ async function rejectOrder(orderId) {
 async function markReady(orderId) {
 
   await sb.from('orders')
-    .update({ status: 'READY' })
+    .update({ 
+  status: 'READY',
+  ready_at: new Date()
+})
     .eq('id', orderId);
 
   alert("Order Ready");
