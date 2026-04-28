@@ -1,5 +1,3 @@
-<!DOCTYPE html>
-
 <html>
 <head>
   <meta charset="UTF-8">
@@ -28,19 +26,23 @@ const sb = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqa2thc3N3eHV6aGFlZ29jYmltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMDE3OTIsImV4cCI6MjA5MjY3Nzc5Mn0.l08t44YE-ElP9pSXV6s1Z6qgktaNz8jboEjJ0cK_BCU"
 );
 
-// 🔴 TEMP DP ID (later login se aayega)
+// 🔴 TEMP DP ID
 const DP_ID = "8de8bb69-588f-4ebc-89a3-96b7963e8864";
 
+
+// ======================
+// LOAD AVAILABLE ORDERS
+// ======================
 async function loadOrders() {
 
   const { data } = await sb
     .from('orders')
-    .select('*')
-    .eq('status', 'READY')   // only ready orders
-    .is('dp_id', null);      // not assigned
+    .select('id, item_name')
+    .eq('status', 'READY')
+    .is('dp_id', null);
 
   const container = document.getElementById("list");
-  container.innerHTML = "";
+  container.innerHTML = "<h3 style='padding:10px'>Available Orders</h3>";
 
   data.forEach(o => {
 
@@ -58,32 +60,44 @@ async function loadOrders() {
 
     container.appendChild(div);
   });
+
+  // ALSO LOAD MY ORDERS BELOW
+  loadMyOrders();
 }
 
+
+// ======================
+// ACCEPT DELIVERY
+// ======================
 async function acceptDelivery(orderId) {
 
   await sb.from('orders')
     .update({
       dp_id: DP_ID,
-      status: 'PICKED'
+      status: 'ACCEPTED_BY_DP'
     })
     .eq('id', orderId);
 
-  alert("Order Picked");
-  loadMyOrders();
+  alert("Delivery Accepted");
+  loadOrders();
 }
 
-// 🔥 AFTER PICKUP VIEW
+
+// ======================
+// LOAD MY ASSIGNED ORDERS
+// ======================
 async function loadMyOrders() {
 
   const { data } = await sb
     .from('orders')
     .select('*')
     .eq('dp_id', DP_ID)
-    .in('status', ['PICKED', 'OUT_FOR_DELIVERY']);
+    .in('status', ['ACCEPTED_BY_DP', 'PICKED']);
 
   const container = document.getElementById("list");
-  container.innerHTML = "<h3 style='padding:10px'>My Deliveries</h3>";
+
+  const section = document.createElement("div");
+  section.innerHTML = "<h3 style='padding:10px'>My Deliveries</h3>";
 
   data.forEach(o => {
 
@@ -94,19 +108,49 @@ async function loadMyOrders() {
       <p><b>Order ID:</b> ${o.id}</p>
       <p><b>Item:</b> ${o.item_name}</p>
 
-      <p><b>Customer:</b> ${o.customer_name || 'Test User'}</p>
-      <p><b>Phone:</b> ${o.customer_phone || '9999999999'}</p>
-      <p><b>Address:</b> ${o.customer_address || 'Test Address'}</p>
+      ${o.status === 'ACCEPTED_BY_DP' ? `
+        <button onclick="markPicked('${o.id}')">
+          Mark Picked
+        </button>
+      ` : ''}
 
-      <button onclick="markDelivered('${o.id}')">
-        Mark Delivered
-      </button>
+      ${o.status === 'PICKED' ? `
+        <p><b>Customer:</b> ${o.customer_name || 'Test User'}</p>
+        <p><b>Phone:</b> ${o.customer_phone || '9999999999'}</p>
+        <p><b>Address:</b> ${o.customer_address || 'Test Address'}</p>
+
+        <button onclick="markDelivered('${o.id}')">
+          Mark Delivered
+        </button>
+      ` : ''}
     `;
 
-    container.appendChild(div);
+    section.appendChild(div);
   });
+
+  container.appendChild(section);
 }
 
+
+// ======================
+// MARK PICKED
+// ======================
+async function markPicked(orderId) {
+
+  await sb.from('orders')
+    .update({
+      status: 'PICKED'
+    })
+    .eq('id', orderId);
+
+  alert("Order Picked");
+  loadOrders();
+}
+
+
+// ======================
+// MARK DELIVERED
+// ======================
 async function markDelivered(orderId) {
 
   await sb.from('orders')
@@ -116,11 +160,13 @@ async function markDelivered(orderId) {
     .eq('id', orderId);
 
   alert("Delivered ✅");
-  loadMyOrders();
+  loadOrders();
 }
 
-// initial load
+
+// INITIAL LOAD
 loadOrders();
+
 </script>
 
 </body>
