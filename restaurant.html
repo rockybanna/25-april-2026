@@ -28,27 +28,20 @@ const sb = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqa2thc3N3eHV6aGFlZ29jYmltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMDE3OTIsImV4cCI6MjA5MjY3Nzc5Mn0.l08t44YE-ElP9pSXV6s1Z6qgktaNz8jboEjJ0cK_BCU"
 );
 
-// 🔴 CHANGE THIS for each restaurant
+// 🔴 CHANGE THIS
 const RESTAURANT_NAME = "Restaurant 1";
 
 async function loadOrders() {
 
-  // get restaurant id
-const { data: rest } = await sb
-  .from('restaurants')
-  .select('id')
-  .eq('name', RESTAURANT_NAME)
-  .single();
+  const { data: rest } = await sb
+    .from('restaurants')
+    .select('id, name')
+    .eq('name', RESTAURANT_NAME)
+    .single();
 
-if (!rest) {
-  alert("Restaurant not found");
-  return;
-}
-  
-  // get only PAID orders
   const { data } = await sb
     .from('orders')
-    .select('*')
+    .select('id, item_name, restaurant_price, status, preparation_time')
     .eq('restaurant_id', rest.id)
     .in('status', ['PAID', 'ACCEPTED'])
     .order('created_at', { ascending: false });
@@ -58,23 +51,30 @@ if (!rest) {
 
   data.forEach(o => {
 
+    const total = o.restaurant_price; // simple (1 qty)
+
     const div = document.createElement("div");
     div.className = "card";
 
-div.innerHTML = `
-  <p><b>Item:</b> ${o.item_name}</p>
-  <p>Total: ₹${o.total_amount}</p>
-  <p>Prep Time: ${o.preparation_time || '-'} min</p>
+    div.innerHTML = `
+      <p><b>Order ID:</b> ${o.id}</p>
+      <p><b>Restaurant:</b> ${rest.name}</p>
 
-  ${o.status === 'PAID' ? `
-    <button onclick="acceptOrder('${o.id}')">Accept</button>
-    <button onclick="rejectOrder('${o.id}')">Reject</button>
-  ` : ''}
+      <p><b>Item:</b> ${o.item_name}</p>
+      <p><b>Price:</b> ₹${o.restaurant_price}</p>
+      <p><b>Total:</b> ₹${total}</p>
 
-  ${o.status === 'ACCEPTED' ? `
-    <button onclick="markReady('${o.id}')">Mark Ready</button>
-  ` : ''}
-`;
+      <p><b>Prep Time:</b> ${o.preparation_time || '-'} min</p>
+
+      ${o.status === 'PAID' ? `
+        <button onclick="acceptOrder('${o.id}')">Accept</button>
+        <button onclick="rejectOrder('${o.id}')">Reject</button>
+      ` : ''}
+
+      ${o.status === 'ACCEPTED' ? `
+        <button onclick="markReady('${o.id}')">Mark Ready</button>
+      ` : ''}
+    `;
 
     container.appendChild(div);
   });
@@ -85,10 +85,9 @@ async function acceptOrder(orderId) {
   const time = prompt("Enter preparation time (minutes):");
 
   if (!time || isNaN(time)) {
-  alert("Enter valid time");
-  return;
-}
-  
+    alert("Enter valid time");
+    return;
+  }
 
   await sb.from('orders')
     .update({
@@ -101,14 +100,11 @@ async function acceptOrder(orderId) {
   alert("Order Accepted");
   loadOrders();
 }
+
 async function rejectOrder(orderId) {
 
-  const reason = prompt("Enter reason:");
-
   await sb.from('orders')
-    .update({
-      status: 'REJECTED'
-    })
+    .update({ status: 'REJECTED' })
     .eq('id', orderId);
 
   alert("Order Rejected");
@@ -118,10 +114,10 @@ async function rejectOrder(orderId) {
 async function markReady(orderId) {
 
   await sb.from('orders')
-    .update({ 
-  status: 'READY',
-  ready_at: new Date()
-})
+    .update({
+      status: 'READY',
+      ready_at: new Date()
+    })
     .eq('id', orderId);
 
   alert("Order Ready");
