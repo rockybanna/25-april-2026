@@ -17,7 +17,7 @@
 
 <body>
 
-<h2 style="padding:10px">Delivery Partner Panel</h2>
+<h2 style="padding:10px">🛵 Delivery Panel</h2>
 <div id="list"></div>
 
 <script>
@@ -28,24 +28,16 @@ const sb = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqa2thc3N3eHV6aGFlZ29jYmltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMDE3OTIsImV4cCI6MjA5MjY3Nzc5Mn0.l08t44YE-ElP9pSXV6s1Z6qgktaNz8jboEjJ0cK_BCU"
 );
 
-// 🔴 CHANGE THIS (simulate DP login)
-const DP_NAME = "DP 1";
+// 🔴 TEMP DP ID (later login se aayega)
+const DP_ID = "8de8bb69-588f-4ebc-89a3-96b7963e8864";
 
 async function loadOrders() {
 
-  // get dp id
-  const { data: dp } = await sb
-    .from('profiles')
-    .select('id')
-    .eq('name', DP_NAME)
-    .single();
-
-  // get available orders OR assigned orders
   const { data } = await sb
     .from('orders')
     .select('*')
-    .or(`status.eq.READY,dp_id.eq.${dp.id}`)
-    .order('created_at', { ascending: false });
+    .eq('status', 'READY')   // only ready orders
+    .is('dp_id', null);      // not assigned
 
   const container = document.getElementById("list");
   container.innerHTML = "";
@@ -56,66 +48,78 @@ async function loadOrders() {
     div.className = "card";
 
     div.innerHTML = `
+      <p><b>Order ID:</b> ${o.id}</p>
       <p><b>Item:</b> ${o.item_name}</p>
-      <p>Total: ₹${o.total_amount}</p>
-      <p>Status: ${o.status}</p>
 
-      ${o.status === 'READY' ? `
-        <button onclick="acceptDelivery('${o.id}','${dp.id}')">
-          Accept Delivery
-        </button>
-      ` : ''}
-
-      ${o.status === 'PICKED' && o.dp_id === dp.id ? `
-        <button onclick="markDelivered('${o.id}')">
-          Mark Delivered
-        </button>
-      ` : ''}
-
-      ${o.status === 'ACCEPTED_BY_DP' && o.dp_id === dp.id ? `
-        <button onclick="markPicked('${o.id}')">
-          Mark Picked
-        </button>
-      ` : ''}
+      <button onclick="acceptDelivery('${o.id}')">
+        Accept Delivery
+      </button>
     `;
 
     container.appendChild(div);
   });
 }
 
-async function acceptDelivery(orderId, dpId) {
+async function acceptDelivery(orderId) {
 
   await sb.from('orders')
     .update({
-      status: 'ACCEPTED_BY_DP',
-      dp_id: dpId
+      dp_id: DP_ID,
+      status: 'PICKED'
     })
     .eq('id', orderId);
 
-  alert("Delivery Accepted");
-  loadOrders();
+  alert("Order Picked");
+  loadMyOrders();
 }
 
-async function markPicked(orderId) {
+// 🔥 AFTER PICKUP VIEW
+async function loadMyOrders() {
 
-  await sb.from('orders')
-    .update({ status: 'PICKED' })
-    .eq('id', orderId);
+  const { data } = await sb
+    .from('orders')
+    .select('*')
+    .eq('dp_id', DP_ID)
+    .in('status', ['PICKED', 'OUT_FOR_DELIVERY']);
 
-  alert("Order Picked");
-  loadOrders();
+  const container = document.getElementById("list");
+  container.innerHTML = "<h3 style='padding:10px'>My Deliveries</h3>";
+
+  data.forEach(o => {
+
+    const div = document.createElement("div");
+    div.className = "card";
+
+    div.innerHTML = `
+      <p><b>Order ID:</b> ${o.id}</p>
+      <p><b>Item:</b> ${o.item_name}</p>
+
+      <p><b>Customer:</b> ${o.customer_name || 'Test User'}</p>
+      <p><b>Phone:</b> ${o.customer_phone || '9999999999'}</p>
+      <p><b>Address:</b> ${o.customer_address || 'Test Address'}</p>
+
+      <button onclick="markDelivered('${o.id}')">
+        Mark Delivered
+      </button>
+    `;
+
+    container.appendChild(div);
+  });
 }
 
 async function markDelivered(orderId) {
 
   await sb.from('orders')
-    .update({ status: 'DELIVERED' })
+    .update({
+      status: 'DELIVERED'
+    })
     .eq('id', orderId);
 
-  alert("Order Delivered");
-  loadOrders();
+  alert("Delivered ✅");
+  loadMyOrders();
 }
 
+// initial load
 loadOrders();
 </script>
 
